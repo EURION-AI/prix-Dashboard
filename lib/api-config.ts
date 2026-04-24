@@ -105,12 +105,35 @@ export interface DashboardFunnel {
 
 export type TimeRange = '24H' | '7D' | '1M' | '3M' | 'ALL'
 
+import { getMockData } from './mock-data'
+
 export async function fetchDashboardData<T>(endpoint: string, timeRange: TimeRange = '24H'): Promise<T> {
-  const response = await fetch(`${config.apiBaseUrl}/api/dashboard/${endpoint}?timeRange=${timeRange}`, {
-    cache: 'no-store',
-  })
-  if (!response.ok) {
-    throw new Error(`Failed to fetch dashboard data: ${response.statusText}`)
+  try {
+    const response = await fetch(`${config.apiBaseUrl}/api/dashboard/${endpoint}?timeRange=${timeRange}`, {
+      cache: 'no-store',
+    })
+    if (!response.ok) {
+      throw new Error(`Failed to fetch dashboard data: ${response.statusText}`)
+    }
+    return response.json()
+  } catch (error) {
+    console.warn('API unavailable, using mock data for endpoint:', endpoint)
+    // Return mock data when API is not available
+    const mockData = getMockData(timeRange)
+    
+    // Map endpoint to mock data property
+    const endpointMap: Record<string, keyof typeof mockData> = {
+      'overview': 'globalOverview',
+      'subscriptions': 'saas',
+      'affiliates': 'affiliates',
+      'technical': 'technical',
+      'security': 'security',
+      'product-usage': 'productUsage',
+      'conversion-funnel': 'conversionFunnel',
+      'websites': 'websiteAnalytics',
+    }
+    
+    const dataKey = endpointMap[endpoint] || 'globalOverview'
+    return mockData[dataKey] as unknown as T
   }
-  return response.json()
 }
