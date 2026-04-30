@@ -184,7 +184,6 @@ WHERE event_type = 'web_vitals';
     ```
 
 ---
-
 ## 8. Affiliates (`/dashboard/affiliates`)
 
 **API Endpoint**: `GET /api/admin/affiliates/performance`
