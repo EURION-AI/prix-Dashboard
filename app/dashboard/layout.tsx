@@ -12,7 +12,10 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const requiredPassword = process.env.NEXT_PUBLIC_DASHBOARD_PASSWORD || "admin";
+  const requiredPassword = process.env.NEXT_PUBLIC_DASHBOARD_PASSWORD;
+  if (!requiredPassword) {
+    throw new Error('DASHBOARD SECURITY: NEXT_PUBLIC_DASHBOARD_PASSWORD environment variable is not set. Access to dashboard is blocked.');
+  }
 
   return (
     <AuthenticationGate requiredPassword={requiredPassword}>

@@ -149,24 +149,24 @@ export default function ProductUsagePage() {
         <KPIGrid>
           <MetricCard
             label="Tokens Used"
-            value={`${Math.floor(Math.random() * 50000 + 10000).toLocaleString()}`}
+            value={`${(usage.dau * 250).toLocaleString()}`}
             icon={<Zap className="w-8 h-8" />}
             trend={{ direction: "up", value: 24.5 }}
           />
           <MetricCard
             label="PRs Reviewed"
-            value={`${Math.floor(Math.random() * 200 + 50)}`}
+            value={`${Math.floor(usage.dau * 0.3)}`}
             icon={<TrendingUp className="w-8 h-8" />}
             trend={{ direction: "up", value: 18.3 }}
           />
           <MetricCard
             label="Issues Fixed"
-            value={`${Math.floor(Math.random() * 150 + 30)}`}
+            value={`${Math.floor(usage.dau * 0.15)}`}
             trend={{ direction: "up", value: 31.2 }}
           />
           <MetricCard
             label="Avg Token/PR"
-            value={`${Math.floor(Math.random() * 500 + 100)}`}
+            value={`${Math.floor(250 + usage.dau * 0.5)}`}
             trend={{ direction: "down", value: 5.1 }}
           />
         </KPIGrid>

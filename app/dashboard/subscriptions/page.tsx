@@ -96,10 +96,10 @@ export default function SubscriptionsPage() {
     },
   };
 
-  const churnNewData = saas.churnNewChart.map((item, index) => ({
+  const churnNewData = saas.churnNewChart.map((item) => ({
     date: item.date,
-    "New Subs": Math.max(20, 50 - index * 0.5 + Math.floor(Math.random() * 20)),
-    "Churn": Math.max(5, 15 - index * 0.3 + Math.floor(Math.random() * 10)),
+    "New Subs": item.value || 20,
+    "Churn": Math.max(3, Math.floor((item.value || 20) * 0.25)),
   }));
 
   return (

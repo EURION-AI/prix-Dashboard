@@ -43,7 +43,7 @@ export default function WebsitesAnalyticsPage() {
     async function loadData() {
       setLoading(true);
       try {
-        const data = await fetchDashboardData<{ websites: any[] }>("analytics", timeRange);
+        const data = await fetchDashboardData<{ websites: any[] }>("websites", timeRange);
         setWebsitesData(data);
       } catch (error) {
         console.error("Failed to load websites data:", error);
