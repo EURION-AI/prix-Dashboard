@@ -6,39 +6,39 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const timeRange = (searchParams.get('timeRange') || '24H') as TimeRange;
-    const mockFunnel = getMockData(timeRange).conversionFunnel;
 
     const { rows } = await pool.query(`
-      SELECT 
-        (SELECT COUNT(DISTINCT session_id) FROM user_events WHERE event_type = 'page_view') AS step1_visitors,
-        (SELECT COUNT(DISTINCT user_id) FROM user_events WHERE event_type = 'signup') AS step2_signups,
-        (SELECT COUNT(DISTINCT customer_id) FROM revenue_events WHERE event_type = 'purchase') AS step3_purchases
+      SELECT
+        (SELECT COUNT(*)::int FROM users) AS total_users,
+        (SELECT COUNT(*)::int FROM users WHERE plan != 'free') AS paying_users,
+        (SELECT COUNT(*)::int FROM referrals) AS total_referrals,
+        (SELECT COUNT(*)::int FROM referrals WHERE has_purchased = true) AS converted_referrals
     `);
 
-    const visitors = Number(rows[0]?.step1_visitors || 0);
-    const signups = Number(rows[0]?.step2_signups || 0);
-    const purchases = Number(rows[0]?.step3_purchases || 0);
+    const totalUsers = Number(rows[0]?.total_users || 0);
+    const payingUsers = Number(rows[0]?.paying_users || 0);
+    const totalReferrals = Number(rows[0]?.total_referrals || 0);
+    const convertedReferrals = Number(rows[0]?.converted_referrals || 0);
 
-    let stages = mockFunnel.stages;
-    if (visitors > 0) {
-      stages = [
-        { name: "Visitors", count: visitors, conversionRate: 100 },
-        { name: "Signups", count: signups, conversionRate: (signups / visitors) * 100 },
-        { name: "Purchases", count: purchases, conversionRate: signups > 0 ? (purchases / signups) * 100 : 0 },
-      ];
-    }
+    const stages = [
+      { name: "Total Users", count: totalUsers, conversionRate: 100 },
+      { name: "Paying Users", count: payingUsers, conversionRate: totalUsers > 0 ? (payingUsers / totalUsers) * 100 : 0 },
+      { name: "Total Referrals", count: totalReferrals, conversionRate: payingUsers > 0 ? (totalReferrals / payingUsers) * 100 : 0 },
+      { name: "Converted Referrals", count: convertedReferrals, conversionRate: totalReferrals > 0 ? (convertedReferrals / totalReferrals) * 100 : 0 },
+    ];
 
-    const data = {
-      ...mockFunnel,
+    const referralChart = [
+      { name: "Referred", value: totalReferrals },
+      { name: "Purchased", value: convertedReferrals },
+    ];
+
+    return NextResponse.json({
       stages,
-      overallConversionRate: visitors > 0 ? purchases / visitors : mockFunnel.overallConversionRate
-    };
-
-    return NextResponse.json(data);
+      overallConversionRate: totalUsers > 0 ? convertedReferrals / totalUsers : 0,
+      referralChart,
+    });
   } catch (error) {
     console.error("Funnel API Error:", error);
-    const { searchParams } = new URL(request.url);
-    const timeRange = (searchParams.get('timeRange') || '24H') as TimeRange;
-    return NextResponse.json(getMockData(timeRange).conversionFunnel);
+    return NextResponse.json(getMockData('24H').conversionFunnel);
   }
 }

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ChevronUp, ChevronDown } from "lucide-react";
 
 interface LeaderboardItem {
-  [key: string]: string | number;
+  [key: string]: string | number | boolean;
 }
 
 interface Column {

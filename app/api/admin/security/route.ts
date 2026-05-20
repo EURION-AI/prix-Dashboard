@@ -6,47 +6,39 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const timeRange = (searchParams.get('timeRange') || '24H') as TimeRange;
-    const mockSecurity = getMockData(timeRange).security;
 
-    const [
-      { rows: multipleAccountsRow },
-      { rows: affiliateSpikesRow },
-    ] = await Promise.all([
-      pool.query(`
-        SELECT ip_hash, COUNT(DISTINCT user_id) as accounts 
-        FROM user_events 
-        WHERE event_type = 'signup' 
-        GROUP BY ip_hash 
-        HAVING COUNT(DISTINCT user_id) > 2
-      `),
-      pool.query(`
-        SELECT affiliate_code, COUNT(*) as clicks 
-        FROM affiliate_events 
-        WHERE event_type = 'click' 
-        GROUP BY affiliate_code 
-        ORDER BY clicks DESC
-      `)
-    ]);
+    const { rows: suspiciousAffiliates } = await pool.query(`
+      SELECT
+        e.affiliate_code,
+        COALESCE(a.username, 'Unknown') AS username,
+        COUNT(*) FILTER (WHERE e.event_type = 'click')::int AS clicks,
+        COUNT(*) FILTER (WHERE e.event_type = 'conversion')::int AS conversions
+      FROM affiliate_events e
+      LEFT JOIN affiliate_users a ON e.affiliate_code = a.affiliate_code
+      GROUP BY e.affiliate_code, a.username
+      ORDER BY clicks DESC
+    `);
 
-    // Count how many IPs have multiple accounts
-    const multipleAccountsPerIp = multipleAccountsRow.length;
+    const affiliateData = suspiciousAffiliates.map((row: any) => ({
+      affiliateCode: row.affiliate_code,
+      username: row.username,
+      clicks: row.clicks,
+      conversions: row.conversions,
+      ratio: row.conversions > 0 ? row.clicks / row.conversions : row.clicks,
+      suspicious: row.clicks > 0 && row.conversions === 0,
+    }));
 
-    // Count how many affiliates have high clicks but no conversions (mock logic since query only gets clicks)
-    // The instructions say "Identify affiliates with high clicks but zero conversions", but the query is just order by clicks DESC
-    // We will just use the number of rows as a loose proxy for spikes, or just keep mock data if 0
-    const affiliateClickSpikes = affiliateSpikesRow.length > 0 ? affiliateSpikesRow.filter(row => Number(row.clicks) > 100).length : 0;
+    const suspicious = affiliateData.filter((a: any) => a.suspicious);
 
-    const data = {
-      ...mockSecurity,
-      multipleAccountsPerIp: multipleAccountsPerIp > 0 ? multipleAccountsPerIp : mockSecurity.multipleAccountsPerIp,
-      affiliateClickSpikes: affiliateClickSpikes > 0 ? affiliateClickSpikes : mockSecurity.affiliateClickSpikes,
-    };
-
-    return NextResponse.json(data);
+    return NextResponse.json({
+      affiliateData,
+      suspiciousAffiliates: suspicious,
+      totalSuspicious: suspicious.length,
+      totalAffiliates: affiliateData.length,
+      totalClicks: affiliateData.reduce((s: number, a: any) => s + a.clicks, 0),
+    });
   } catch (error) {
     console.error("Security API Error:", error);
-    const { searchParams } = new URL(request.url);
-    const timeRange = (searchParams.get('timeRange') || '24H') as TimeRange;
-    return NextResponse.json(getMockData(timeRange).security);
+    return NextResponse.json(getMockData('24H').security);
   }
 }

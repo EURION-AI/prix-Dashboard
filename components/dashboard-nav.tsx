@@ -23,8 +23,8 @@ export interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { label: "Overview", href: "/dashboard", icon: <Home className="w-4 h-4" /> },
   {
-    label: "Website Analytics",
-    href: "/dashboard/websites",
+    label: "Activity",
+    href: "/dashboard/activity",
     icon: <Globe className="w-4 h-4" />,
   },
   {

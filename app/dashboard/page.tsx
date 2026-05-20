@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Users, TrendingUp, DollarSign, Activity } from "lucide-react";
+import { Users, DollarSign, Activity, GitPullRequest, UserCheck, UserPlus } from "lucide-react";
 import { TimeRangeFilter } from "@/components/time-range-filter";
 import { MetricCard } from "@/components/metric-card";
 import { KPIGrid } from "@/components/kpi-grid";
@@ -83,7 +83,6 @@ export default function DashboardPage() {
       initial="hidden"
       animate="visible"
     >
-      {/* Header */}
       <motion.div
         className="flex items-center justify-between"
         variants={itemVariants}
@@ -97,80 +96,62 @@ export default function DashboardPage() {
         <TimeRangeFilter value={timeRange} onChange={setTimeRange} />
       </motion.div>
 
-      {/* KPI Grid */}
+      {/* Users & PRs */}
       <motion.div variants={itemVariants}>
         <KPIGrid>
           <MetricCard
-            label="Visitors"
-            value={overview.visitors.toLocaleString()}
+            label="Total Users"
+            value={overview.totalUsers.toLocaleString()}
             icon={<Users className="w-8 h-8" />}
-            trend={{ direction: "up", value: 12.5 }}
+            trend={{ direction: "up", value: 0 }}
           />
           <MetricCard
-            label="Sessions"
-            value={overview.sessions.toLocaleString()}
-            icon={<Activity className="w-8 h-8" />}
-            trend={{ direction: "up", value: 8.3 }}
+            label="Total PRs Reviewed"
+            value={overview.totalPrsReviewed.toLocaleString()}
+            icon={<GitPullRequest className="w-8 h-8" />}
+            trend={{ direction: "up", value: 0 }}
           />
-          <MetricCard
-            label="Page Views"
-            value={overview.pageViews.toLocaleString()}
-            icon={<TrendingUp className="w-8 h-8" />}
-            trend={{ direction: "down", value: -2.1 }}
-          />
-          <MetricCard
-            label="Signups"
-            value={overview.signups.toLocaleString()}
-            icon={<Users className="w-8 h-8" />}
-            trend={{ direction: "up", value: 15.7 }}
-          />
-        </KPIGrid>
-      </motion.div>
-
-      {/* Revenue and Subscription Metrics */}
-      <motion.div variants={itemVariants}>
-        <KPIGrid>
           <MetricCard
             label="MRR"
-            value={`$${(overview.mrr / 1000).toFixed(0)}k`}
+            value={`$${(overview.mrr / 1000).toFixed(1)}k`}
             icon={<DollarSign className="w-8 h-8" />}
-            trend={{ direction: "up", value: 9.2 }}
+            trend={{ direction: "up", value: 0 }}
           />
           <MetricCard
             label="ARR"
             value={`$${(overview.arr / 1000000).toFixed(1)}M`}
             icon={<DollarSign className="w-8 h-8" />}
-            trend={{ direction: "up", value: 9.2 }}
-          />
-          <MetricCard
-            label="Paying Customers"
-            value={overview.payingCustomers.toLocaleString()}
-            icon={<Users className="w-8 h-8" />}
-            trend={{ direction: "up", value: 5.3 }}
-          />
-          <MetricCard
-            label="Trial to Paid Rate"
-            value={`${overview.trialToPaidRate.toFixed(1)}%`}
-            icon={<TrendingUp className="w-8 h-8" />}
-            trend={{ direction: "up", value: 2.1 }}
+            trend={{ direction: "up", value: 0 }}
           />
         </KPIGrid>
       </motion.div>
 
-      {/* Affiliate Metrics */}
+      {/* Plan Distribution & Affiliates */}
       <motion.div variants={itemVariants}>
         <KPIGrid>
           <MetricCard
             label="Active Affiliates"
             value={overview.activeAffiliates.toLocaleString()}
             icon={<Users className="w-8 h-8" />}
-            trend={{ direction: "up", value: 4.2 }}
+            trend={{ direction: "up", value: 0 }}
           />
           <MetricCard
             label="Affiliate Revenue"
-            value={`$${(overview.affiliateRevenue / 1000).toFixed(0)}k`}
+            value={`$${(overview.affiliateRevenue / 1000).toFixed(1)}k`}
             icon={<DollarSign className="w-8 h-8" />}
-            trend={{ direction: "up", value: 18.5 }}
+            trend={{ direction: "up", value: 0 }}
+          />
+          <MetricCard
+            label="Total Referrals"
+            value={overview.referrals.toLocaleString()}
+            icon={<Activity className="w-8 h-8" />}
+            trend={{ direction: "up", value: 0 }}
+          />
+          <MetricCard
+            label="Referral Conv. Rate"
+            value={`${overview.referralConversionRate.toFixed(1)}%`}
+            icon={<UserPlus className="w-8 h-8" />}
+            trend={{ direction: "up", value: 0 }}
           />
         </KPIGrid>
       </motion.div>
@@ -179,11 +160,11 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <motion.div variants={itemVariants}>
           <ChartContainer
-            title="Visitor Trends"
-            description="Total visitors over time"
+            title="Trends"
+            description="Metrics over time"
           >
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={overview.visitorsChart}>
+              <LineChart data={overview.chartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
                 <XAxis dataKey="date" stroke="rgba(255,255,255,0.5)" />
                 <YAxis stroke="rgba(255,255,255,0.5)" />
@@ -209,13 +190,13 @@ export default function DashboardPage() {
 
         <motion.div variants={itemVariants}>
           <ChartContainer
-            title="Revenue Trends"
-            description="MRR growth over time"
+            title="Users by Plan"
+            description="Plan distribution across all users"
           >
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={overview.revenueChart}>
+              <BarChart data={overview.planDistribution}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-                <XAxis dataKey="date" stroke="rgba(255,255,255,0.5)" />
+                <XAxis dataKey="plan" stroke="rgba(255,255,255,0.5)" />
                 <YAxis stroke="rgba(255,255,255,0.5)" />
                 <Tooltip
                   contentStyle={{
@@ -225,43 +206,12 @@ export default function DashboardPage() {
                   }}
                   labelStyle={{ color: "white" }}
                 />
-                <Line
-                  type="monotone"
-                  dataKey="value"
-                  stroke="#10b981"
-                  dot={false}
-                  strokeWidth={2}
-                />
-              </LineChart>
+                <Bar dataKey="count" fill="#3b82f6" radius={[8, 8, 0, 0]} />
+              </BarChart>
             </ResponsiveContainer>
           </ChartContainer>
         </motion.div>
       </div>
-
-      {/* Top Websites */}
-      <motion.div variants={itemVariants}>
-        <ChartContainer
-          title="Top Websites by Revenue"
-          description="Revenue distribution across your properties"
-        >
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={overview.topWebsites}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-              <XAxis dataKey="name" stroke="rgba(255,255,255,0.5)" />
-              <YAxis stroke="rgba(255,255,255,0.5)" />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "rgba(15, 23, 42, 0.9)",
-                  border: "1px solid rgba(255,255,255,0.1)",
-                  borderRadius: "8px",
-                }}
-                labelStyle={{ color: "white" }}
-              />
-              <Bar dataKey="revenue" fill="#3b82f6" radius={[8, 8, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </ChartContainer>
-      </motion.div>
     </motion.div>
   );
 }

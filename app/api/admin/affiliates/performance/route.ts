@@ -6,47 +6,59 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const timeRange = (searchParams.get('timeRange') || '24H') as TimeRange;
-    const mockAffiliate = getMockData(timeRange).affiliates;
 
-    const { rows } = await pool.query(`
-      SELECT 
-        a.username,
-        a.affiliate_code,
-        COUNT(e.id) FILTER (WHERE e.event_type = 'click') AS total_clicks,
-        COUNT(e.id) FILTER (WHERE e.event_type = 'conversion') AS total_conversions,
-        SUM(e.commission_amount) / 100 AS total_commission_owed
-      FROM affiliate_users a
-      LEFT JOIN affiliate_events e ON a.affiliate_code = e.affiliate_code
-      GROUP BY a.id, a.username, a.affiliate_code
-      ORDER BY total_conversions DESC
-    `);
+    const [
+      { rows: affiliateData },
+      { rows: referralStats },
+    ] = await Promise.all([
+      pool.query(`
+        SELECT
+          a.username, a.affiliate_code, a.tier,
+          a.referral_count::int, a.paid_referral_count::int,
+          COALESCE(COUNT(e.id) FILTER (WHERE e.event_type = 'click'), 0)::int AS total_clicks,
+          COALESCE(COUNT(e.id) FILTER (WHERE e.event_type = 'conversion'), 0)::int AS total_conversions,
+          COALESCE(SUM(e.commission_amount)/100.0, 0)::float AS total_commission
+        FROM affiliate_users a
+        LEFT JOIN affiliate_events e ON a.affiliate_code = e.affiliate_code
+        GROUP BY a.id, a.username, a.affiliate_code, a.tier, a.referral_count, a.paid_referral_count
+        ORDER BY total_conversions DESC
+      `),
+      pool.query(`
+        SELECT
+          COUNT(*)::int AS total,
+          COUNT(*) FILTER (WHERE has_purchased = true)::int AS converted,
+          COALESCE(SUM(purchased_amount)/100.0, 0)::float AS total_revenue
+        FROM referrals
+      `),
+    ]);
 
-    const affiliates = rows.map(row => ({
-      name: row.username,
-      clicks: Number(row.total_clicks) || 0,
-      conversions: Number(row.total_conversions) || 0,
-      revenue: Number(row.total_conversions) * 100, // mock revenue calculation as real revenue isn't in query
-      commission: Number(row.total_commission_owed) || 0,
-      conversionRate: Number(row.total_clicks) > 0 ? (Number(row.total_conversions) / Number(row.total_clicks)) * 100 : 0
+    const affiliates = affiliateData.map((row: any) => ({
+      name: row.username || 'Unknown',
+      affiliateCode: row.affiliate_code,
+      tier: row.tier || 'standard',
+      referralCount: row.referral_count,
+      paidReferralCount: row.paid_referral_count,
+      clicks: row.total_clicks,
+      conversions: row.total_conversions,
+      commission: row.total_commission,
+      conversionRate: row.total_clicks > 0 ? (row.total_conversions / row.total_clicks) * 100 : 0,
     }));
 
-    const totalClicks = affiliates.reduce((sum, a) => sum + a.clicks, 0);
-    const totalConversions = affiliates.reduce((sum, a) => sum + a.conversions, 0);
-    const totalCommission = affiliates.reduce((sum, a) => sum + a.commission, 0);
+    const totalClicks = affiliates.reduce((s: number, a: any) => s + a.clicks, 0);
+    const totalConversions = affiliates.reduce((s: number, a: any) => s + a.conversions, 0);
+    const totalCommission = affiliates.reduce((s: number, a: any) => s + a.commission, 0);
 
-    const data = {
-      ...mockAffiliate,
-      clicks: totalClicks > 0 ? totalClicks : mockAffiliate.clicks,
-      signups: totalConversions > 0 ? totalConversions : mockAffiliate.signups,
-      commissionOwed: totalCommission > 0 ? totalCommission : mockAffiliate.commissionOwed,
-      affiliates: affiliates.length > 0 ? affiliates : mockAffiliate.affiliates,
-    };
-
-    return NextResponse.json(data);
+    return NextResponse.json({
+      affiliates,
+      totalClicks,
+      totalConversions,
+      conversionRate: totalClicks > 0 ? (totalConversions / totalClicks) * 100 : 0,
+      totalCommission,
+      revenuePerAffiliate: affiliates.length > 0 ? totalCommission / affiliates.length : 0,
+      ...referralStats[0],
+    });
   } catch (error) {
     console.error("Affiliates API Error:", error);
-    const { searchParams } = new URL(request.url);
-    const timeRange = (searchParams.get('timeRange') || '24H') as TimeRange;
-    return NextResponse.json(getMockData(timeRange).affiliates);
+    return NextResponse.json(getMockData('24H').affiliates);
   }
 }
