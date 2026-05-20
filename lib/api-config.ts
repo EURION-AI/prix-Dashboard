@@ -3,104 +3,120 @@ export const config = {
 }
 
 export interface DashboardOverview {
-  visitors: number
-  sessions: number
-  pageViews: number
-  signups: number
-  payingCustomers: number
+  totalUsers: number
+  planDistribution: Array<{ plan: string; count: number }>
+  totalPrsReviewed: number
   mrr: number
   arr: number
-  trialToPaidRate: number
   activeAffiliates: number
   affiliateRevenue: number
-  visitorsChart: Array<{ date: string; value: number }>
-  revenueChart: Array<{ date: string; value: number }>
-  topWebsites: Array<{ name: string; revenue: number }>
+  referrals: number
+  convertedReferrals: number
+  referralConversionRate: number
+  chartData: Array<{ date: string; value: number }>
+}
+
+export interface DashboardActivity {
+  prsByRepo: Array<{ repo_name: string; count: number }>
+  activityTimeline: Array<{ date: string; count: number }>
+  issueExecutions: Array<{ repo_name: string; count: number; avg_duration: number }>
+  totalPrs: number
+  totalIssues: number
+  avgExecutionDuration: number
 }
 
 export interface DashboardSubscription {
+  planDistribution: Array<{ plan: string; count: number }>
   mrr: number
   arr: number
-  arpa: number
-  expansionRevenue: number
-  contractionRevenue: number
-  activeSubs: number
-  trialUsers: number
+  revenueByTier: Array<{ subscription_tier: string; revenue: number }>
+  razorpayPlans: Array<{ internal_plan_id: string; amount: number; currency: string }>
+  totalUsers: number
+  payingUsers: number
   freeUsers: number
-  churnRate: number
-  revenueChurn: number
-  nrr: number
-  grr: number
-  mrrChart: Array<{ date: string; value: number }>
-  churnNewChart: Array<{ date: string; value: number }>
-  customerSegments: Array<{ name: string; value: number }>
 }
 
 export interface DashboardAffiliate {
-  clicks: number
-  signups: number
-  conversionRate: number
-  revenuePerAffiliate: number
-  commissionOwed: number
   affiliates: Array<{
     name: string
+    affiliateCode: string
+    tier: string
+    referralCount: number
+    paidReferralCount: number
     clicks: number
     conversions: number
-    revenue: number
     commission: number
     conversionRate: number
   }>
-  clicksVsConversionsChart: Array<{ date: string; value: number }>
-  trendChart: Array<{ date: string; value: number }>
-}
-
-export interface DashboardTechnical {
-  pageLoadTime: number
-  ttfb: number
-  apiResponseTime: number
-  errorRate: number
-  uptime: number
-  coreWebVitals: {
-    lcp: number
-    fid: number
-    cls: number
-  }
-  pageLoadChart: Array<{ date: string; value: number }>
-  errorRateChart: Array<{ date: string; value: number }>
-  uptimeHistory: Array<{ date: string; value: number }>
-}
-
-export interface DashboardSecurity {
-  failedLogins: number
-  suspiciousSignups: number
-  multipleAccountsPerIp: number
-  affiliateClickSpikes: number
-  riskScores: Array<{ type: string; score: number }>
-  suspiciousActivityChart: Array<{ date: string; value: number }>
-  fraudHeatmap: Array<{ time: string; affiliateId: string; risk: number }>
+  totalClicks: number
+  totalConversions: number
+  conversionRate: number
+  totalCommission: number
+  revenuePerAffiliate: number
+  total: number
+  converted: number
+  total_revenue: number
 }
 
 export interface DashboardProductUsage {
-  dau: number
-  wau: number
-  mau: number
-  features: Array<{ name: string; users: number; timeSpent: number }>
-  cohortRetention: Array<{
-    cohort: string
-    week0: number
-    week1: number
-    week2: number
-    week3: number
-    week4: number
+  monthlyUsage: {
+    prs_reviewed: number
+    auto_prs: number
+    issues_planned: number
+    grand_total: number
+  }
+  totalUsage: {
+    prs_reviewed: number
+    auto_prs: number
+    issues_planned: number
+  }
+  executionStats: {
+    total_executions: number
+    avg_duration: number
+    avg_files: number
+    avg_tokens: number
+  }
+  chartData: Array<{ date: string; value: number }>
+}
+
+export interface DashboardPerformance {
+  executionStats: {
+    total_executions: number
+    avg_duration: number
+    min_duration: number
+    max_duration: number
+    avg_files: number
+    avg_tokens: number
+  }
+  activityTimeline: Array<{ date: string; count: number }>
+}
+
+export interface DashboardSecurity {
+  affiliateData: Array<{
+    affiliateCode: string
+    username: string
+    clicks: number
+    conversions: number
+    ratio: number
+    suspicious: boolean
   }>
-  dauWauMauChart: Array<{ date: string; dau: number; wau: number; mau: number }>
-  featureUsageChart: Array<Record<string, string | number>>
+  suspiciousAffiliates: Array<{
+    affiliateCode: string
+    username: string
+    clicks: number
+    conversions: number
+    ratio: number
+    suspicious: boolean
+  }>
+  totalSuspicious: number
+  totalAffiliates: number
+  totalClicks: number
 }
 
 export interface DashboardFunnel {
   stages: Array<{ name: string; count: number; conversionRate: number }>
   overallConversionRate: number
-  dropoffChart: Array<{ date: string; value: number }>
+  referralChart: Array<{ name: string; value: number }>
 }
 
 export type TimeRange = '24H' | '7D' | '1M' | '3M' | 'ALL'
@@ -116,7 +132,7 @@ export async function fetchDashboardData<T>(endpoint: string, timeRange: TimeRan
     'security': 'admin/security',
     'product-usage': 'admin/product/usage',
     'conversion-funnel': 'admin/funnel',
-    'websites': 'admin/websites/traffic',
+    'activity': 'admin/activity',
   }
   const targetEndpoint = apiEndpointMap[endpoint] || `dashboard/${endpoint}`;
 
@@ -130,10 +146,8 @@ export async function fetchDashboardData<T>(endpoint: string, timeRange: TimeRan
     return response.json()
   } catch (error) {
     console.warn('API unavailable, using mock data for endpoint:', endpoint)
-    // Return mock data when API is not available
     const mockData = getMockData(timeRange)
-    
-    // Map endpoint to mock data property
+
     const endpointMap: Record<string, keyof typeof mockData> = {
       'overview': 'globalOverview',
       'subscriptions': 'saas',
@@ -142,9 +156,8 @@ export async function fetchDashboardData<T>(endpoint: string, timeRange: TimeRan
       'security': 'security',
       'product-usage': 'productUsage',
       'conversion-funnel': 'conversionFunnel',
-      'websites': 'websiteAnalytics',
     }
-    
+
     const dataKey = endpointMap[endpoint] || 'globalOverview'
     return mockData[dataKey] as unknown as T
   }
